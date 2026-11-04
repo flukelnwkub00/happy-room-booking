@@ -5,8 +5,10 @@ const TIMES = ['08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00','
 const WEEKDAY = ['อา','จ','อ','พ','พฤ','ศ','ส'];
 const WEEKDAY_FULL = ['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์'];
 const MONTH_SHORT = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+const MONTH_FULL = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
 const MAX_HOURS = 4;
 const DAYS_AHEAD = 7;
+const BOOK_AHEAD_DAYS = 60;
 const HISTORY_DAYS = 14;
 
 const API_URL = ((window.HAPPY_CONFIG || {}).API_URL || '').trim();
@@ -106,6 +108,7 @@ const api = API_URL ? sheetApi : localApi;
 // ---------- state ----------
 const TODAY = new Date(); TODAY.setHours(0, 0, 0, 0);
 const DAYS = Array.from({ length: DAYS_AHEAD }, (_, i) => ymd(addDays(TODAY, i)));
+const LAST_DAY = ymd(addDays(TODAY, BOOK_AHEAD_DAYS));
 
 const state = {
   bookings: [],
@@ -114,6 +117,8 @@ const state = {
   picked: [],
   confirmId: null,
   confirmManual: false,
+  calOpen: false,
+  calMonth: new Date(TODAY.getFullYear(), TODAY.getMonth(), 1),
   mineQuery: null,
   saving: false,
 };
@@ -132,7 +137,7 @@ function rememberMine(id, contact) {
 
 async function load() {
   try {
-    state.bookings = await api.list(ymd(addDays(TODAY, -HISTORY_DAYS)), DAYS[DAYS.length - 1]);
+    state.bookings = await api.list(ymd(addDays(TODAY, -HISTORY_DAYS)), LAST_DAY);
     state.loaded = true;
   } catch {
     toast(errText('network'));
@@ -155,6 +160,7 @@ const freeCount = (date) => slotsFor(date).filter((s) => !s.booking && !s.past).
 const ICON = {
   check: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7" stroke="#fff" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
   cross: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 7l10 10M17 7L7 17" stroke="#fff" stroke-width="2.8" stroke-linecap="round"/></svg>',
+  calendar: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="3" stroke="currentColor" stroke-width="2"/><path d="M3.5 10h17M8 3v4M16 3v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
   moon: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M19 14.5A7.5 7.5 0 019.5 5a7.5 7.5 0 109.5 9.5z" stroke="#fff" stroke-width="2.2" stroke-linejoin="round"/></svg>',
 };
 
@@ -208,9 +214,81 @@ function renderDays() {
     const free = state.loaded ? freeCount(date) : null;
     const label = free === null ? '…' : free ? `ว่าง ${free}` : 'เต็ม';
     b.innerHTML = `${idx === 0 ? 'วันนี้' : WEEKDAY[d.getDay()]}<b>${d.getDate()}</b><small>${label}</small>`;
-    b.addEventListener('click', () => { state.day = date; state.picked = []; renderBook(); });
+    b.addEventListener('click', () => { state.day = date; state.picked = []; state.calOpen = false; renderBook(); });
     el.appendChild(b);
   });
+
+  // a date picked from the calendar that isn't in the 7-day strip shows up on this button
+  const far = !DAYS.includes(state.day);
+  const cal = $('calBtn');
+  cal.className = 'cal-btn' + (far ? ' is-active' : '') + (state.calOpen ? ' is-open' : '');
+  cal.setAttribute('aria-expanded', state.calOpen);
+  cal.innerHTML = `${ICON.calendar}<span>${far ? shortDate(state.day) : 'ดูปฏิทิน'}</span>`;
+}
+
+function toggleCalendar() {
+  state.calOpen = !state.calOpen;
+  if (state.calOpen) { const d = dateObj(state.day); state.calMonth = new Date(d.getFullYear(), d.getMonth(), 1); }
+  renderDays();
+  renderCalendar();
+}
+
+// ---------- month calendar ----------
+function renderCalendar() {
+  const el = $('calendar');
+  el.hidden = !state.calOpen;
+  if (!state.calOpen) return;
+
+  const m = state.calMonth;
+  const first = new Date(m.getFullYear(), m.getMonth(), 1);
+  const daysInMonth = new Date(m.getFullYear(), m.getMonth() + 1, 0).getDate();
+  const canPrev = first > TODAY;
+  const canNext = ymd(new Date(m.getFullYear(), m.getMonth() + 1, 1)) <= LAST_DAY;
+
+  el.innerHTML = `
+    <div class="cal-head">
+      <button type="button" class="cal-nav" data-dir="-1" aria-label="เดือนก่อน" ${canPrev ? '' : 'disabled'}>‹</button>
+      <p class="cal-title">${MONTH_FULL[m.getMonth()]} ${m.getFullYear() + 543}</p>
+      <button type="button" class="cal-nav" data-dir="1" aria-label="เดือนถัดไป" ${canNext ? '' : 'disabled'}>›</button>
+    </div>
+    <div class="cal-grid">${WEEKDAY.map((w) => `<span class="cal-wd">${w}</span>`).join('')}</div>`;
+
+  const grid = el.querySelector('.cal-grid');
+  for (let i = 0; i < first.getDay(); i++) grid.appendChild(document.createElement('span'));
+  for (let n = 1; n <= daysInMonth; n++) {
+    const date = ymd(new Date(m.getFullYear(), m.getMonth(), n));
+    const b = document.createElement('button');
+    b.type = 'button';
+    const out = date < DAYS[0] || date > LAST_DAY;
+    const free = out || !state.loaded ? null : freeCount(date);
+    let cls = 'cal-day';
+    if (date === state.day) cls += ' is-active';
+    if (date === DAYS[0]) cls += ' is-today';
+    if (free === 0) cls += ' is-full';
+    b.className = cls;
+    b.disabled = out;
+    b.setAttribute('aria-label', `${fullDate(date)}${free === null ? '' : free ? ` ว่าง ${free} ช่วง` : ' เต็มแล้ว'}`);
+    b.innerHTML = `${n}${free !== null && free < TIMES.length - 1 ? `<i class="${free ? 'dot-some' : 'dot-full'}"></i>` : ''}`;
+    if (!out) b.addEventListener('click', () => {
+      state.day = date;
+      state.picked = [];
+      state.calOpen = false;
+      renderBook();
+      $('slotsHeading').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+    grid.appendChild(b);
+  }
+
+  el.querySelectorAll('.cal-nav').forEach((btn) => btn.addEventListener('click', () => {
+    state.calMonth = new Date(m.getFullYear(), m.getMonth() + Number(btn.dataset.dir), 1);
+    renderCalendar();
+  }));
+
+  el.insertAdjacentHTML('beforeend', `
+    <div class="cal-legend">
+      <span><i class="dot-some"></i>มีคนจองบางช่วง</span>
+      <span><i class="dot-full"></i>เต็มทั้งวัน</span>
+    </div>`);
 }
 
 // ---------- slots ----------
@@ -260,7 +338,7 @@ function renderCta() {
   $('ctaBar').hidden = false;
 }
 
-function renderBook() { renderNow(); renderDays(); renderSlots(); renderCta(); }
+function renderBook() { renderNow(); renderDays(); renderCalendar(); renderSlots(); renderCta(); }
 
 // ---------- booking sheet ----------
 function openSheet() {
@@ -479,6 +557,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (profile.name) { $('mineName').value = profile.name; state.mineQuery = profile.name; }
 
   $('ctaBtn').addEventListener('click', openSheet);
+  $('calBtn').addEventListener('click', toggleCalendar);
   $('bookForm').addEventListener('submit', submitBooking);
   document.querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', closeSheet));
   $('sheetBackdrop').addEventListener('click', closeSheet);

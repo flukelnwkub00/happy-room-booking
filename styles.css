@@ -120,6 +120,73 @@ button{ cursor: pointer; }
 .day.is-active b{ color: #fff; }
 .day.is-active small{ color: var(--sun); }
 
+.day-head{ margin: 20px 2px 0; align-items: center; }
+.days{ padding-top: 10px; }
+.cal-btn{
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  border-radius: 999px;
+  padding: 7px 14px 7px 11px;
+  background: var(--card);
+  color: var(--cocoa);
+  font-size: 14.5px;
+  font-weight: 500;
+  box-shadow: 0 4px 12px -8px rgba(120, 80, 0, .5);
+}
+.cal-btn svg{ width: 18px; height: 18px; }
+.cal-btn:hover{ background: var(--sun-soft); }
+.cal-btn.is-open{ background: var(--sun); }
+.cal-btn.is-active{ background: var(--cocoa); color: var(--sun); }
+
+/* ---------- Month calendar ---------- */
+.cal{
+  background: var(--card);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+  padding: 14px 14px 12px;
+  margin-top: 10px;
+}
+.cal-head{ display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.cal-title{ font-weight: 500; font-size: 17px; }
+.cal-nav{
+  width: 40px; height: 40px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--cream);
+  font-size: 22px;
+  line-height: 1;
+}
+.cal-nav:hover:not(:disabled){ background: var(--sun-soft); }
+.cal-nav:disabled{ opacity: .3; cursor: default; }
+.cal-grid{ display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; text-align: center; }
+.cal-wd{ font-size: 12.5px; color: var(--cocoa-soft); padding: 4px 0; }
+.cal-day{
+  position: relative;
+  border: 0;
+  background: transparent;
+  border-radius: 12px;
+  height: 44px;
+  font-size: 16px;
+  font-weight: 500;
+}
+.cal-day:hover:not(:disabled){ background: var(--cream); }
+.cal-day:disabled{ color: #D6CBAA; cursor: default; }
+.cal-day.is-today{ box-shadow: inset 0 0 0 2px var(--sun); }
+.cal-day.is-full{ color: var(--busy-ink); }
+.cal-day.is-active{ background: var(--cocoa); color: var(--sun); }
+.cal-day i, .cal-legend i{
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.cal-day i{ position: absolute; left: 50%; bottom: 6px; transform: translateX(-50%); }
+.dot-some{ background: var(--sun); }
+.dot-full{ background: var(--busy-ink); }
+.cal-legend{ display: flex; gap: 14px; justify-content: center; font-size: 12.5px; color: var(--cocoa-soft); margin-top: 8px; }
+.cal-legend span{ display: inline-flex; align-items: center; gap: 6px; }
+
 /* ---------- Slots ---------- */
 .section-head{ display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 4px 12px; margin: 18px 2px 10px; }
 .section-head h2{ font-size: 18px; font-weight: 500; }
