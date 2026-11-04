@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>จองห้องประชุม Happy CU</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Mitr:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div class="app">
+
+  <header class="hero">
+    <div class="hero-inner">
+      <p class="hello" id="hello">สวัสดี</p>
+      <h1 class="title">จองห้องประชุม Happy CU</h1>
+      <nav class="tabs" aria-label="เมนู">
+        <button class="tab is-active" data-view="book" type="button">จองห้อง</button>
+        <button class="tab" data-view="mine" type="button">การจองของฉัน</button>
+        <button class="tab" data-view="history" type="button">ประวัติ</button>
+      </nav>
+    </div>
+  </header>
+
+  <main class="content">
+
+    <p class="mode-note" id="modeNote" hidden>โหมดทดลอง: ข้อมูลการจองเก็บไว้ในเบราว์เซอร์เครื่องนี้เท่านั้น คนอื่นจะยังไม่เห็น</p>
+
+    <section class="view" id="view-book">
+      <div class="now-card" id="nowCard" aria-live="polite">
+        <div class="now-dot" id="nowDot"></div>
+        <div>
+          <p class="now-title" id="nowTitle">—</p>
+          <p class="now-sub" id="nowSub"></p>
+        </div>
+      </div>
+
+      <div class="days" id="days" role="tablist" aria-label="เลือกวัน"></div>
+
+      <div class="section-head">
+        <h2 id="slotsHeading">เลือกช่วงเวลา</h2>
+        <p class="hint">แตะช่องว่างติดกันได้สูงสุด 4 ชั่วโมง</p>
+      </div>
+      <div class="slots" id="slots"></div>
+
+      <div class="legend">
+        <span><i class="lg lg-free"></i>ว่าง</span>
+        <span><i class="lg lg-pick"></i>เลือกแล้ว</span>
+        <span><i class="lg lg-busy"></i>มีคนจองแล้ว</span>
+      </div>
+    </section>
+
+    <section class="view" id="view-mine" hidden>
+      <form class="search-card" id="mineForm">
+        <label class="field">
+          <span>ชื่อของคุณ</span>
+          <input type="text" id="mineName" placeholder="เช่น สมชาย">
+        </label>
+        <button type="submit" class="btn btn-dark">ดูการจอง</button>
+      </form>
+      <div class="list" id="mineList"></div>
+    </section>
+
+    <section class="view" id="view-history" hidden>
+      <p class="hint history-hint">การจองของทุกแผนก ย้อนหลัง 14 วันและที่กำลังจะถึง</p>
+      <div class="list" id="historyList"></div>
+    </section>
+
+  </main>
+
+  <div class="cta-bar" id="ctaBar" hidden>
+    <button class="btn btn-dark btn-cta" id="ctaBtn" type="button"></button>
+  </div>
+
+</div>
+
+<div class="sheet-backdrop" id="sheetBackdrop" hidden></div>
+<div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle" hidden>
+  <div class="sheet-handle" aria-hidden="true"></div>
+
+  <form id="bookForm" class="sheet-body">
+    <h2 id="sheetTitle">กรอกข้อมูลการจอง</h2>
+    <p class="sheet-summary" id="sheetSummary"></p>
+
+    <label class="field"><span>ชื่อผู้จอง</span><input name="name" type="text" placeholder="เช่น สมชาย ใจดี"></label>
+    <label class="field"><span>แผนก</span><input name="dept" type="text" placeholder="เช่น บัญชี"></label>
+    <div class="field-row">
+      <label class="field"><span>เบอร์โทรหรืออีเมล</span><input name="contact" type="text" placeholder="ไว้ติดต่อกลับ"></label>
+      <label class="field field-small"><span>จำนวนคน</span><input name="people" type="number" min="1" max="20" placeholder="5"></label>
+    </div>
+    <label class="field"><span>ประชุมเรื่องอะไร</span><input name="purpose" type="text" placeholder="เช่น ประชุมทีมประจำสัปดาห์"></label>
+
+    <p class="form-error" id="formError" hidden></p>
+
+    <div class="sheet-actions">
+      <button type="button" class="btn btn-light" data-close>ยกเลิก</button>
+      <button type="submit" class="btn btn-dark" id="submitBtn">ยืนยันการจอง</button>
+    </div>
+  </form>
+
+  <div class="sheet-body done" id="doneView" hidden>
+    <div class="done-icon" aria-hidden="true">
+      <svg width="34" height="34" viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4.2 4.2L19 7" stroke="#fff" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+    <h2>จองเรียบร้อยแล้ว</h2>
+    <div class="done-card" id="doneCard"></div>
+    <button type="button" class="btn btn-dark btn-wide" data-close>เสร็จแล้ว</button>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script src="config.js"></script>
+<script src="script.js"></script>
+</body>
+</html>
