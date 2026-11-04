@@ -71,7 +71,8 @@ function create_(b) {
     x.status === 'active' && x.date === booking.date && x.start < booking.end && booking.start < x.end);
   if (clash) return { ok: false, error: 'taken' };
 
-  sheet_().appendRow(HEADERS.map((h) => booking[h]));
+  // leading apostrophe keeps values as text, so phone numbers don't lose their leading 0
+  sheet_().appendRow(HEADERS.map((h) => "'" + booking[h]));
   return { ok: true, booking: publicView_(booking) };
 }
 
@@ -82,11 +83,22 @@ function cancel_(id, contact) {
     const row = rowToObj_(values[r]);
     if (row.id !== id) continue;
     if (row.status !== 'active') return { ok: false, error: 'already_cancelled' };
-    if (row.contact.trim().toLowerCase() !== contact.trim().toLowerCase()) return { ok: false, error: 'wrong_contact' };
+    if (normContact_(row.contact) !== normContact_(contact)) return { ok: false, error: 'wrong_contact' };
     sh.getRange(r + 1, HEADERS.indexOf('status') + 1).setValue('cancelled');
     return { ok: true };
   }
   return { ok: false, error: 'not_found' };
+}
+
+// "081-234 5678", "0812345678", "+66812345678" and a sheet value that lost its 0 all match
+function normContact_(s) {
+  let v = String(s).trim().toLowerCase().replace(/[\s\-().]/g, '');
+  if (/^\+?\d+$/.test(v)) {
+    v = v.replace(/^\+/, '');
+    if (v.length === 11 && v.indexOf('66') === 0) v = v.slice(2);
+    v = v.replace(/^0+/, '');
+  }
+  return v;
 }
 
 // works whether the script was opened from a spreadsheet or created on its own

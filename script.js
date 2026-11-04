@@ -44,6 +44,17 @@ const store = {
   set(key, value) { try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* storage unavailable */ } },
 };
 
+// same rule as normContact_ in apps-script/Code.gs
+function normContact(s) {
+  let v = String(s).trim().toLowerCase().replace(/[\s\-().]/g, '');
+  if (/^\+?\d+$/.test(v)) {
+    v = v.replace(/^\+/, '');
+    if (v.length === 11 && v.startsWith('66')) v = v.slice(2);
+    v = v.replace(/^0+/, '');
+  }
+  return v;
+}
+
 // ---------- data layer ----------
 function overlaps(a, b) { return a.date === b.date && a.start < b.end && b.start < a.end; }
 
@@ -67,7 +78,7 @@ const localApi = {
     const b = all.find((x) => x.id === id);
     if (!b) return { ok: false, error: 'not_found' };
     if (b.status !== 'active') return { ok: false, error: 'already_cancelled' };
-    if (b.contact.trim().toLowerCase() !== contact.trim().toLowerCase()) return { ok: false, error: 'wrong_contact' };
+    if (normContact(b.contact) !== normContact(contact)) return { ok: false, error: 'wrong_contact' };
     b.status = 'cancelled';
     store.set(this.KEY, all);
     return { ok: true };
@@ -102,6 +113,7 @@ const state = {
   day: DAYS[0],
   picked: [],
   confirmId: null,
+  confirmManual: false,
   mineQuery: null,
   saving: false,
 };
@@ -109,7 +121,14 @@ const state = {
 const mine = new Set(store.get('happyroom.mine', []));
 const profile = store.get('happyroom.profile', { name: '', dept: '', contact: '' });
 
-function rememberMine(id) { mine.add(id); store.set('happyroom.mine', [...mine]); }
+const contacts = store.get('happyroom.contacts', {});
+
+function rememberMine(id, contact) {
+  mine.add(id);
+  store.set('happyroom.mine', [...mine]);
+  contacts[id] = contact;
+  store.set('happyroom.contacts', contacts);
+}
 
 async function load() {
   try {
@@ -289,7 +308,7 @@ async function submitBooking(e) {
 
   Object.assign(profile, { name: booking.name, dept: booking.dept, contact: booking.contact });
   store.set('happyroom.profile', profile);
-  rememberMine(res.booking.id);
+  rememberMine(res.booking.id, booking.contact);
   state.bookings.push(res.booking);
   state.picked = [];
 
@@ -349,7 +368,7 @@ function renderMine() {
       btn.type = 'button';
       btn.className = 'link-cancel';
       btn.textContent = 'ยกเลิก';
-      btn.addEventListener('click', () => { state.confirmId = b.id; renderMine(); });
+      btn.addEventListener('click', () => { state.confirmId = b.id; state.confirmManual = false; renderMine(); });
       row.appendChild(btn);
     }
     el.appendChild(row);
@@ -357,7 +376,8 @@ function renderMine() {
 }
 
 function buildCancelConfirm(b) {
-  const knowsContact = mine.has(b.id) && profile.contact;
+  const saved = contacts[b.id] || (mine.has(b.id) ? profile.contact : '');
+  const knowsContact = Boolean(saved) && !state.confirmManual;
   const box = document.createElement('form');
   box.className = 'confirm';
   box.innerHTML = `
@@ -374,7 +394,7 @@ function buildCancelConfirm(b) {
   box.querySelector('[data-no]').addEventListener('click', () => { state.confirmId = null; renderMine(); });
   box.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const contact = knowsContact ? profile.contact : box.contact.value;
+    const contact = knowsContact ? saved : box.contact.value;
     const err = box.querySelector('.form-error');
     if (!contact.trim()) { err.textContent = 'ใส่เบอร์หรืออีเมลก่อนนะ'; err.hidden = false; return; }
     const submit = box.querySelector('[type=submit]');
@@ -382,6 +402,15 @@ function buildCancelConfirm(b) {
     submit.textContent = 'กำลังยกเลิก…';
     let res;
     try { res = await api.cancel(b.id, contact); } catch { res = { ok: false, error: 'network' }; }
+    if (!res.ok && res.error === 'wrong_contact' && knowsContact) {
+      // the remembered contact didn't match; let the person type it instead of getting stuck
+      state.confirmManual = true;
+      renderMine();
+      const e2 = document.querySelector('.confirm .form-error');
+      e2.textContent = 'เบอร์ที่จำไว้ในเครื่องนี้ไม่ตรง ลองพิมพ์เบอร์หรืออีเมลที่ใช้ตอนจองอีกครั้ง';
+      e2.hidden = false;
+      return;
+    }
     if (!res.ok) {
       err.textContent = errText(res.error);
       err.hidden = false;
